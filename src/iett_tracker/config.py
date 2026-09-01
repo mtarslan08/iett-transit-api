@@ -3,6 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     iett_wsdl_url: str | None = "https://api.ibb.gov.tr/iett/FiloDurum/SeferGerceklesme.asmx?wsdl"
+    iett_api_username: str | None = None
+    iett_api_password: str | None = None
     iett_stops_wsdl_url: str | None = "https://api.ibb.gov.tr/iett/UlasimAnaVeri/HatDurakGuzergah.asmx?wsdl"
     iett_ntc_api_url: str | None = "https://ntcapi.iett.istanbul/service"
     iett_live_url: str | None = None

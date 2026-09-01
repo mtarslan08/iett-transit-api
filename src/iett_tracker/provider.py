@@ -64,6 +64,16 @@ class IettProvider:
         rows = payload.get("features", payload if isinstance(payload, list) else [])
         return self._snapshot(rows, settings.iett_live_url)
 
+    async def fetch_line(self, line_code: str) -> LiveSnapshot | None:
+        """Resmi İETT hat bazlı SOAP akışı; HatKodu ve AuthHeader kullanır."""
+        if not settings.iett_wsdl_url:
+            return None
+        try:
+            rows = await asyncio.to_thread(self._fetch_line_soap_rows, line_code.strip().upper())
+            return self._snapshot(rows, f"{settings.iett_wsdl_url}#GetHatOtoKonum_json")
+        except (httpx.HTTPError, ValueError, TypeError):
+            return None
+
     def _fetch_soap_rows(self) -> list[dict]:
         try:
             client = Client(wsdl=settings.iett_wsdl_url)
@@ -87,6 +97,26 @@ class IettProvider:
                 raise ValueError("İETT SOAP yanıtında araç sonucu bulunamadı")
             return json.loads(result)
 
+    def _fetch_line_soap_rows(self, line_code: str) -> list[dict]:
+        endpoint = settings.iett_wsdl_url.split("?", 1)[0]
+        username = settings.iett_api_username or ""
+        password = settings.iett_api_password or ""
+        envelope = f'''<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://tempuri.org/">
+  <SOAP-ENV:Header><ns1:AuthHeader><ns1:Username>{username}</ns1:Username><ns1:Password>{password}</ns1:Password></ns1:AuthHeader></SOAP-ENV:Header>
+  <SOAP-ENV:Body><ns1:GetHatOtoKonum_json><ns1:HatKodu>{line_code}</ns1:HatKodu></ns1:GetHatOtoKonum_json></SOAP-ENV:Body>
+</SOAP-ENV:Envelope>'''
+        response = httpx.post(endpoint, content=envelope.encode(), headers={
+            "Content-Type": "text/xml; charset=utf-8",
+            "SOAPAction": '"http://tempuri.org/GetHatOtoKonum_json"',
+        }, timeout=settings.iett_request_timeout_seconds)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        result = next((node.text for node in root.iter() if node.tag.endswith("Result") and node.text), None)
+        if not result:
+            raise ValueError("İETT hat SOAP yanıtında araç sonucu bulunamadı")
+        return json.loads(result)
+
     def _snapshot(self, rows: list[dict], source: str) -> LiveSnapshot:
         vehicles: list[Vehicle] = []
         now = datetime.now(UTC)
@@ -95,20 +125,22 @@ class IettProvider:
         for row in rows:
             props = row.get("properties", row)
             geometry = row.get("geometry", {})
-            coords = geometry.get("coordinates", [props.get("longitude"), props.get("latitude")])
+            coords = geometry.get("coordinates", [props.get("longitude", props.get("boylam")), props.get("latitude", props.get("enlem"))])
             if props.get("Enlem") is not None and props.get("Boylam") is not None:
                 coords = [props.get("Boylam"), props.get("Enlem")]
+            if props.get("enlem") is not None and props.get("boylam") is not None:
+                coords = [props.get("boylam"), props.get("enlem")]
             if len(coords) < 2 or coords[0] is None or coords[1] is None:
                 continue
-            recorded_at = self._parse_time(props.get("Saat"))
+            recorded_at = self._parse_time(props.get("Saat", props.get("son_konum_zamani")))
             if recorded_at and (now - recorded_at).total_seconds() > settings.max_vehicle_age_seconds:
                 self._last_stale_count += 1
                 continue
             vehicles.append(Vehicle(
-                id=str(props.get("id", props.get("vehicle_id", props.get("KapiNo", props.get("plate", "unknown"))))),
-                line=props.get("line", props.get("route")),
+                id=str(props.get("id", props.get("vehicle_id", props.get("KapiNo", props.get("kapino", props.get("plate", "unknown")))))),
+                line=props.get("line", props.get("route", props.get("hatkodu"))),
                 plate=props.get("plate", props.get("Plaka")),
-                door_number=props.get("door_number", props.get("KapiNo")),
+                door_number=props.get("door_number", props.get("KapiNo", props.get("kapino"))),
                 garage=props.get("garage", props.get("Garaj")),
                 speed_kmh=props.get("speed_kmh", props.get("Hiz")),
                 longitude=float(coords[0]), latitude=float(coords[1]),
@@ -136,7 +168,11 @@ class IettProvider:
         if not value:
             return None
         try:
-            parsed = datetime.strptime(str(value), "%H:%M:%S").replace(tzinfo=timezone(timedelta(hours=3)))
+            text = str(value)
+            if len(text) > 8:
+                parsed = datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone(timedelta(hours=3)))
+            else:
+                parsed = datetime.strptime(text, "%H:%M:%S").replace(tzinfo=timezone(timedelta(hours=3)))
             return parsed.astimezone(UTC).replace(year=datetime.now(UTC).year, month=datetime.now(UTC).month, day=datetime.now(UTC).day)
         except ValueError:
             return None

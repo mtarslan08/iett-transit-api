@@ -133,6 +133,17 @@ async def route_map(line_code: str):
 @app.get("/api/live/vehicles/near-route")
 async def vehicles_near_route(line_code: str):
     """Hat bilgisi yokken yalnızca güzergâha yakın canlı araçları döndürür."""
+    exact_snapshot = await provider.fetch_line(line_code)
+    if exact_snapshot is not None:
+        return {
+            "available": bool(exact_snapshot.vehicles),
+            "line": line_code.upper(),
+            "vehicles": exact_snapshot.vehicles,
+            "fetched_at": exact_snapshot.fetched_at,
+            "matching_method": "iett-official-line-soap",
+            "line_verified": True,
+            "note": "Resmi İETT GetHatOtoKonum_json akışından alındı.",
+        }
     async with httpx.AsyncClient(timeout=15) as client:
         route_response = await client.get(
             "https://iett.istanbul/tr/RouteStation/GetRoutePinV2",

@@ -47,7 +47,7 @@ Canlı araç cevapları varsayılan olarak 20 saniye cache’lenir. `LIVE_CACHE_
 
 Canlı durak varışları için İETT’nin `WMyBus` HTML kaynağı kullanılır. `GET /api/live/arrivals?stop_code=225972&line_code=KM12` endpoint’i `origin`, `departure_time` ve `eta_minutes` alanlarını döndürür.
 
-Resmi tüm-filo SOAP kaydında hat kodu bulunmadığı için haritadaki araçlar yalnızca güzergâha yakınlık olarak işaretlenir; kesin hat eşleşmesi iddia edilmez.
+Hat bazlı canlı araçlar için resmi İETT `GetHatOtoKonum_json` SOAP metodu kullanılır. Güncel WSDL’de parametre adı `HatKodu` ve `AuthHeader` alanları `Username`/`Password` olarak tanımlıdır; bu değerler `.env` üzerinden verilebilir. Metot çalışmazsa haritada yalnızca güzergâha yakınlık fallback’i kullanılır.
 
 Hat-durak ETA sonuçları 15 saniye cache’lenir; İETT servisi geçici olarak yanıt vermezse son başarılı cevap korunur.
 
