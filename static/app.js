@@ -74,7 +74,7 @@ async function showMap(line) {
   const live = await getJson(`/api/live/vehicles/near-route?line_code=${encodeURIComponent(line)}`);
   $('live-status').textContent = live.line_verified ? 'Hat eşleşmesi doğrulandı' : 'Güzergâha yakın araçlar · hat doğrulanmadı';
   for (const vehicle of live.vehicles || []) {
-    L.marker([vehicle.latitude, vehicle.longitude]).bindPopup(`<b>${vehicle.plate || 'Plaka yok'}</b><br>Kapı: ${vehicle.door_number || '-'}<br>Hız: ${vehicle.speed_kmh ?? '-'} km/sa<br><small>Hat doğrulaması mevcut değil</small>`).addTo(map);
+    L.marker([vehicle.latitude, vehicle.longitude]).bindPopup(`<b>${vehicle.line || line}</b><br>Plaka: ${vehicle.plate || 'Plaka yok'}<br>Kapı: ${vehicle.door_number || '-'}<br>Yön: ${vehicle.direction || '-'}<br>Hız: ${vehicle.speed_kmh ?? '-'} km/sa`).addTo(map);
   }
   if (!keepView) map.fitBounds(points, { padding: [20, 20] });
 }

@@ -12,6 +12,9 @@ class Vehicle(BaseModel):
     latitude: float = Field(ge=-90, le=90)
     longitude: float = Field(ge=-180, le=180)
     bearing: float | None = None
+    direction: str | None = None
+    route_code: str | None = None
+    nearest_stop_id: str | None = None
     recorded_at: datetime | None = None
 
 

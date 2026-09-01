@@ -69,8 +69,22 @@ class IettProvider:
         if not settings.iett_wsdl_url:
             return None
         try:
-            rows = await asyncio.to_thread(self._fetch_line_soap_rows, line_code.strip().upper())
-            return self._snapshot(rows, f"{settings.iett_wsdl_url}#GetHatOtoKonum_json")
+            code = line_code.strip().upper()
+            rows = await asyncio.to_thread(self._fetch_line_soap_rows, code)
+            line_snapshot = self._snapshot(rows, f"{settings.iett_wsdl_url}#GetHatOtoKonum_json")
+            fleet_snapshot = await self.fetch()
+            fleet_by_door = {self._door_key(v.door_number): v for v in fleet_snapshot.vehicles if v.door_number}
+            merged = []
+            for vehicle in line_snapshot.vehicles:
+                fleet_vehicle = fleet_by_door.get(self._door_key(vehicle.door_number))
+                if fleet_vehicle:
+                    vehicle = vehicle.model_copy(update={
+                        "plate": fleet_vehicle.plate,
+                        "garage": fleet_vehicle.garage,
+                        "speed_kmh": fleet_vehicle.speed_kmh,
+                    })
+                merged.append(vehicle)
+            return line_snapshot.model_copy(update={"vehicles": merged})
         except (httpx.HTTPError, ValueError, TypeError):
             return None
 
@@ -145,9 +159,16 @@ class IettProvider:
                 speed_kmh=props.get("speed_kmh", props.get("Hiz")),
                 longitude=float(coords[0]), latitude=float(coords[1]),
                 bearing=props.get("bearing"),
+                direction=props.get("direction", props.get("yon")),
+                route_code=props.get("route_code", props.get("guzergahkodu")),
+                nearest_stop_id=str(props.get("nearest_stop_id", props.get("yakinDurakKodu"))) if props.get("yakinDurakKodu") is not None else None,
                 recorded_at=recorded_at,
             ))
         return LiveSnapshot(fetched_at=datetime.now(UTC), source=source, vehicles=vehicles)
+
+    @staticmethod
+    def _door_key(value: str | None) -> str:
+        return "".join(str(value or "").upper().split()).replace("-", "")
 
     def status(self) -> dict:
         snapshot = self._cached_snapshot
