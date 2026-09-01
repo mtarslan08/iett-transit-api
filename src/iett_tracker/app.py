@@ -21,7 +21,7 @@ app = FastAPI(
     title="İETT Transit Data API",
     description="İETT canlı araç, hat, durak ve varış verilerini geliştiriciler için sade REST cevaplarına dönüştürür.",
     version="1.0.0",
-    contact={"name": "otobusum_nerede_v2", "url": "https://github.com/mtarslan08/otobusum_nerede_v2"},
+    contact={"name": "iett-transit-api", "url": "https://github.com/mtarslan08/iett-transit-api"},
 )
 app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()] or ["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")

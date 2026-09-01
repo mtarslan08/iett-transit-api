@@ -9,8 +9,8 @@ Resmî İETT API’si değildir. Merkezi bir API adresi sağlamaz; her geliştir
 Gereksinimler: Python 3.11+ ve Git.
 
 ```powershell
-git clone https://github.com/mtarslan08/otobusum_nerede_v2.git
-cd otobusum_nerede_v2
+git clone https://github.com/mtarslan08/iett-transit-api.git
+cd iett-transit-api
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
