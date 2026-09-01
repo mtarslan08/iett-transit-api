@@ -1,6 +1,8 @@
 # İETT Canlı Otobüs Takibi
 
-İETT canlı araç konumlarını ve durak bilgilerini tek bir backend üzerinden birleştiren açık kaynak proje.
+İETT canlı araç konumlarını ve durak bilgilerini geliştiricilerin kendi bilgisayarlarında çalıştırabileceği sade bir REST API’ye dönüştüren açık kaynak proje.
+
+Bu proje herkese açık bir hosted servis değildir. Kullanıcılar repoyu indirir, kendi yerel API sunucularını çalıştırır ve veriyi doğrudan İETT kaynaklarından alır.
 
 ## Hedef mimari
 
@@ -12,6 +14,15 @@ Canlı veri kaynağı değişebildiği için sağlayıcı katmanı ayrı tutulur
 
 ## Başlangıç
 
+### Kurulum
+
+Gereksinimler: Python 3.11+ ve Git.
+
+```powershell
+git clone https://github.com/mtarslan08/otobusum_nerede_v2.git
+cd otobusum_nerede_v2
+```
+
 > Önemli: `static/index.html` dosyasını çift tıklayarak açma. Uygulama FastAPI üzerinden çalışır; aksi halde CSS ve JavaScript yüklenmez.
 
 ```powershell
@@ -20,6 +31,8 @@ py -m venv .venv
 pip install -e .
 uvicorn iett_tracker.app:app --reload
 ```
+
+Google Maps anahtarı veya ücretli bir servis gerekmez. `.env.example` dosyasını `.env` olarak kopyalamak isteğe bağlıdır; varsayılan resmi İETT endpoint’leriyle uygulama çalışır.
 
 Python PATH'te değilse Windows'ta şu komutu kullanabilirsin:
 
@@ -55,10 +68,14 @@ Canlı filo gözlemleri `data/vehicles.sqlite3` içinde zaman damgasıyla tutulu
 
 Bir aracın geçmişi `GET /api/live/vehicles/{vehicle_id}/history` ile incelenebilir. Hat ataması, tek bir GPS noktasından değil, ardışık gözlemlerden üretilecektir.
 
+## Yayınlama
+
+Bu repository yerel kullanım için tasarlanmıştır. İstersen kendi sunucunda veya uygun bir hosting üzerinde çalıştırabilirsin; `Dockerfile` ve `render.yaml` örnek yapılandırma olarak tutulur. Hosted servisin maliyeti, kaynak limitleri ve İETT kullanım koşulları deploy eden geliştiriciye aittir.
+
 ## Durum
 
 Resmi İETT hat bazlı SOAP, filo SOAP ve WMyBus kaynakları; retry, sağlık izleme, ETA-plaka eşleştirmesi ve temel favori/konum/bildirim arayüzü hazırdır.
 
 ## Lisans
 
-Lisans kararı ilk yayın öncesi verilecektir.
+MIT lisansı ile dağıtılır. İETT veri kaynaklarının kendi kullanım koşulları ayrıca geçerlidir.

@@ -1,8 +1,19 @@
 # İETT Transit Data API
 
-Bu proje, İETT’nin canlı SOAP ve WMyBus kaynaklarını geliştiricilerin kolay tüketebileceği REST JSON endpoint’lerine dönüştüren topluluk yapımı bir adaptördür. Resmî İETT API’si değildir.
+Bu proje, İETT’nin canlı SOAP ve WMyBus kaynaklarını geliştiricilerin kolay tüketebileceği REST JSON endpoint’lerine dönüştüren topluluk yapımı bir adaptördür. Resmî İETT API’si değildir ve merkezi hosted API adresi sağlamaz; her geliştirici projeyi kendi ortamında çalıştırır.
 
 ## Hızlı başlangıç
+
+```powershell
+git clone https://github.com/mtarslan08/otobusum_nerede_v2.git
+cd otobusum_nerede_v2
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+uvicorn iett_tracker.app:app --reload --app-dir src
+```
+
+Ücretli Google API anahtarı gerekmez. API, doğrudan İETT kaynaklarına istek atar.
 
 Uygulama çalışırken Swagger arayüzü: `http://localhost:8000/docs`
 
