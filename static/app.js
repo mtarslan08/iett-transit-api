@@ -94,7 +94,7 @@ function showVehicles(data, line) {
   }
   if (!data.available || !arrivals.length) { target.className = 'empty'; target.textContent = 'Bu durak için şu anda canlı varış verisi bulunamadı.'; return; }
   target.className = '';
-  target.innerHTML = arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'} · İETT canlı</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
+  target.innerHTML = arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'} · Kapı: ${v.door_number || '—'}</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
 }
 
 async function search() {

@@ -45,7 +45,9 @@ Canlı araç cevapları varsayılan olarak 20 saniye cache’lenir. `LIVE_CACHE_
 
 İETT servisi geçici olarak cevap vermezse son başarılı cache kullanılır. Cache yoksa endpoint hata fırlatmak yerine `available: false` ve boş veri döndürür.
 
-Canlı durak varışları için çalışan web kaynağı `GET /api/live/arrivals?stop_code=225972&line_code=KM12` endpoint’i üzerinden kullanılır. Backend, İETT’nin `WMyBus` HTML yanıtını parse eder ve `origin`, `departure_time` ve `eta_minutes` alanlarını döndürür.
+Canlı durak varışları için önce hat + kapı kodu + ETA döndüren İETTNext uyumluluk kaynağı (`IETT_NEXT_API_URL`) kullanılır; ulaşılamazsa İETT’nin `WMyBus` HTML kaynağına düşülür. `GET /api/live/arrivals?stop_code=225972&line_code=KM12` endpoint’i `origin`, `departure_time`, `eta_minutes` ve varsa `door_number` alanlarını döndürür.
+
+Hat bazlı canlı araçlar için aynı uyumluluk kaynağının `line-vehicles` akışı kullanılır. Bu akışta hat kodu ve güzergâh bilgisi yanıtın içinde bulunduğu için haritadaki araçlar artık yalnızca GPS yakınlığıyla değil, hat bazlı veriyle eşleştirilir. Bu üçüncü taraf kaynak resmi İETT API’si değildir; kapanması veya değişmesi ihtimaline karşı resmi SOAP/güzergâh fallback’i korunur.
 
 Hat-durak ETA sonuçları 15 saniye cache’lenir; İETT servisi geçici olarak yanıt vermezse son başarılı cevap korunur.
 
