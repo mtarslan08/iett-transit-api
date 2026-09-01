@@ -12,13 +12,22 @@ from .history import VehicleHistory
 from math import cos, radians
 import re
 
-app = FastAPI(title="İETT Canlı Otobüs API", version="0.1.0")
+app = FastAPI(
+    title="İETT Transit Data API",
+    description="İETT canlı araç, hat, durak ve varış verilerini geliştiriciler için sade REST cevaplarına dönüştürür.",
+    version="1.0.0",
+    contact={"name": "otobusum_nerede_v2", "url": "https://github.com/mtarslan08/otobusum_nerede_v2"},
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 provider = IettProvider()
 stop_catalog = StopCatalog()
 route_catalog = RouteCatalog()
 arrival_provider = IettArrivalProvider()
 vehicle_history = VehicleHistory()
+
+
+def api_response(data, *, source: str = "iett", fetched_at=None, stale: bool = False) -> dict:
+    return {"data": data, "meta": {"source": source, "fetched_at": fetched_at, "stale": stale}}
 
 
 def _route_points(route_rows: list[dict]) -> list[tuple[float, float]]:
@@ -192,6 +201,47 @@ async def arrivals(stop_code: str, line_code: str):
             value["match_confidence"] = "unmatched"
         enriched.append(value)
     return {**result, "arrivals": enriched, "vehicle_match_count": len(candidates)}
+
+
+# Public, versioned developer API. Eski /api endpointleri geriye dönük uyumluluk
+# için korunur; yeni entegrasyonlar /api/v1 kullanmalıdır.
+@app.get("/api/v1/vehicles", tags=["vehicles"])
+async def v1_vehicles():
+    result = await live_vehicles()
+    return api_response(result["vehicles"], source=result["source"], fetched_at=result["fetched_at"], stale=not result["available"])
+
+
+@app.get("/api/v1/vehicles/{line_code}", tags=["vehicles"])
+async def v1_line_vehicles(line_code: str):
+    result = await vehicles_near_route(line_code)
+    return api_response(result["vehicles"], source=result.get("matching_method", "iett"), fetched_at=result.get("fetched_at"), stale=not result.get("available", False)) | {"line": line_code.upper(), "line_verified": result.get("line_verified", False)}
+
+
+@app.get("/api/v1/lines/{line_code}", tags=["lines"])
+async def v1_line(line_code: str):
+    result = await route(line_code)
+    return api_response(result["directions"], source="iett-route-catalog") | {"line": result["line"], "count": result["count"]}
+
+
+@app.get("/api/v1/stops", tags=["stops"])
+async def v1_stops():
+    result = await stops()
+    return api_response(result["stops"], source="iett-stop-catalog") | {"count": result["count"]}
+
+
+@app.get("/api/v1/stops/{stop_code}", tags=["stops"])
+async def v1_stop(stop_code: str):
+    items = await stop_catalog.fetch()
+    stop_item = next((item for item in items if item.id == stop_code), None)
+    if stop_item is None:
+        return api_response(None, source="iett-stop-catalog") | {"error": {"code": "stop_not_found", "message": "Durak bulunamadı."}}
+    return api_response(stop_item, source="iett-stop-catalog")
+
+
+@app.get("/api/v1/stops/{stop_code}/arrivals", tags=["arrivals"])
+async def v1_stop_arrivals(stop_code: str, line_code: str):
+    result = await arrivals(stop_code, line_code)
+    return api_response(result["arrivals"], source=result.get("source", "iett"), fetched_at=result.get("fetched_at"), stale=not result.get("available", False)) | {"stop_code": stop_code, "line": line_code.upper(), "vehicle_match_count": result.get("vehicle_match_count", 0)}
 
 
 @app.post("/api/eta")

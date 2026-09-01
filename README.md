@@ -29,6 +29,8 @@ Python PATH'te değilse Windows'ta şu komutu kullanabilirsin:
 
 Ardından tarayıcıda `http://127.0.0.1:8000` adresini aç.
 
+Geliştiriciler için sürümlü REST API endpoint’leri `/api/v1` altında bulunur. Swagger: `http://127.0.0.1:8000/docs`. Ayrıntılı kullanım için [API.md](API.md) dosyasına bakabilirsin.
+
 `GET http://127.0.0.1:8000/health` ile kontrol edilebilir.
 
 ETA denemesi için `POST /api/eta` endpoint’ine aşağıdaki gövde gönderilebilir:
