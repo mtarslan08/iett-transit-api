@@ -1,83 +1,66 @@
-# İETT Canlı Otobüs Takibi
+# İETT Transit API
 
-İETT canlı araç konumlarını ve durak bilgilerini geliştiricilerin kendi bilgisayarlarında çalıştırabileceği sade bir REST API’ye dönüştüren açık kaynak proje.
+İETT’nin canlı araç, hat, durak ve varış verilerini geliştiricilerin kullanabileceği REST API biçiminde sunan açık kaynak bir adaptör.
 
-Bu proje herkese açık bir hosted servis değildir. Kullanıcılar repoyu indirir, kendi yerel API sunucularını çalıştırır ve veriyi doğrudan İETT kaynaklarından alır.
+Resmî İETT API’si değildir. Merkezi bir API adresi sağlamaz; her geliştirici projeyi kendi ortamında çalıştırır.
 
-## Hedef mimari
-
-İETT canlı veri sağlayıcısı → normalize edilmiş araç modeli → durak/hat eşleştirme → ETA ve bekleme hesabı → web/mobile arayüz.
-
-Arayüzde birincil araç kartı sırası: hat numarası, tahmini süre, plaka ve kapı numarasıdır. Plaka araç ayrımı için görünen kimlik; kapı numarası ise İETT’nin operasyonel araç kimliğidir.
-
-Canlı veri kaynağı değişebildiği için sağlayıcı katmanı ayrı tutulur. API anahtarları koda yazılmaz; `.env` üzerinden verilir.
-
-## Başlangıç
-
-### Kurulum
+## Kurulum
 
 Gereksinimler: Python 3.11+ ve Git.
 
 ```powershell
 git clone https://github.com/mtarslan08/otobusum_nerede_v2.git
 cd otobusum_nerede_v2
-```
-
-> Önemli: `static/index.html` dosyasını çift tıklayarak açma. Uygulama FastAPI üzerinden çalışır; aksi halde CSS ve JavaScript yüklenmez.
-
-```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
-uvicorn iett_tracker.app:app --reload
+uvicorn iett_tracker.app:app --reload --app-dir src
 ```
 
-Google Maps anahtarı veya ücretli bir servis gerekmez. `.env.example` dosyasını `.env` olarak kopyalamak isteğe bağlıdır; varsayılan resmi İETT endpoint’leriyle uygulama çalışır.
+API çalıştıktan sonra:
 
-Python PATH'te değilse Windows'ta şu komutu kullanabilirsin:
+- Swagger: `http://127.0.0.1:8000/docs`
+- Sağlık kontrolü: `http://127.0.0.1:8000/health`
+
+Python PATH’te değilse `py` yerine kurulu Python yolunu kullanabilirsin.
+
+## Endpoint’ler
+
+| Endpoint | Açıklama |
+|---|---|
+| `GET /api/v1/vehicles` | Tüm canlı araçlar |
+| `GET /api/v1/vehicles/{line_code}` | Bir hattın canlı araçları |
+| `GET /api/v1/lines/{line_code}` | Hat yönleri ve durakları |
+| `GET /api/v1/stops` | Durak kataloğu |
+| `GET /api/v1/stops/{stop_code}` | Tek durak bilgisi |
+| `GET /api/v1/stops/{stop_code}/arrivals?line_code=KM34` | Durak-hat varışları |
+
+Örnek:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/vehicles/KM34
+curl "http://127.0.0.1:8000/api/v1/stops/225972/arrivals?line_code=KM34"
+```
+
+## Veri kaynakları
+
+- `GetFiloAracKonum_json`: canlı filo konumları
+- `GetHatOtoKonum_json`: hat bazlı canlı araçlar
+- `GetDurak_json`: durak kataloğu
+- `WMyBus`: tahmini durak varışları
+
+Yanıtlar `data` ve `meta` alanlarıyla döner. `meta` içinde kaynak, alınma zamanı ve verinin güncel olup olmadığı bulunur. Plaka eşleşmesi yoksa `plate` alanı boş bırakılır.
+
+Canlı kaynaklar geçici olarak yanıt vermezse cache ve retry mekanizmaları kullanılır. `/api/v1` endpoint’leri istemci başına dakikada 120 istekle sınırlıdır.
+
+## Geliştirme
 
 ```powershell
-& "C:\Users\harslan\AppData\Local\Programs\Python\Python313\python.exe" -m uvicorn iett_tracker.app:app --reload --app-dir src
+pytest -q
 ```
 
-Ardından tarayıcıda `http://127.0.0.1:8000` adresini aç.
-
-Geliştiriciler için sürümlü REST API endpoint’leri `/api/v1` altında bulunur. Swagger: `http://127.0.0.1:8000/docs`. Ayrıntılı kullanım için [API.md](API.md) dosyasına bakabilirsin.
-
-`GET http://127.0.0.1:8000/health` ile kontrol edilebilir.
-
-Varsayılan CORS ayarı geliştirici denemeleri için açıktır. Yayınlanan bir serviste `.env` içindeki `CORS_ORIGINS` değerini izin verilen domainlerle sınırlandır.
-
-Eski uyumluluk endpoint’i olan `POST /api/eta` deneysel olarak işaretlidir; kuş uçuşu mesafe ve ortalama hız kullanır. Geliştirici entegrasyonları için `/api/v1` endpoint’lerini tercih et.
-
-```json
-{"id":"DURAK_ID","name":"Durak adı","latitude":41.0082,"longitude":28.9784}
-```
-
-ETA tarafında Google Maps API kullanılmaz; uygulama resmi İETT canlı akışlarıyla çalışır ve plaka eşleşmesi olmayan kayıtlarda tahmin uydurmaz.
-
-Canlı araç cevapları varsayılan olarak 20 saniye cache’lenir. `LIVE_CACHE_SECONDS` ile değiştirilebilir. Aynı anda gelen isteklerde yalnızca tek bir veri yenilemesi yapılır.
-
-İETT servisi geçici olarak cevap vermezse son başarılı cache kullanılır. Cache yoksa endpoint hata fırlatmak yerine `available: false` ve boş veri döndürür.
-
-Canlı durak varışları için İETT’nin `WMyBus` HTML kaynağı kullanılır. `GET /api/live/arrivals?stop_code=225972&line_code=KM12` endpoint’i `origin`, `departure_time` ve `eta_minutes` alanlarını döndürür.
-
-Hat bazlı canlı araçlar için resmi İETT `GetHatOtoKonum_json` SOAP metodu kullanılır. Güncel WSDL’de parametre adı `HatKodu` ve `AuthHeader` alanları `Username`/`Password` olarak tanımlıdır; bu değerler `.env` üzerinden verilebilir. Metot çalışmazsa haritada yalnızca güzergâha yakınlık fallback’i kullanılır.
-
-Hat-durak ETA sonuçları 15 saniye cache’lenir; İETT servisi geçici olarak yanıt vermezse son başarılı cevap korunur.
-
-Canlı filo gözlemleri `data/vehicles.sqlite3` içinde zaman damgasıyla tutulur. Araç kimliği (plaka/kapı no) sabit, hat ataması ise ayrı ve zamanla değişen bir ilişki olarak ele alınır.
-
-Bir aracın geçmişi `GET /api/live/vehicles/{vehicle_id}/history` ile incelenebilir. Hat ataması, tek bir GPS noktasından değil, ardışık gözlemlerden üretilecektir.
-
-## Yayınlama
-
-Bu repository yerel kullanım için tasarlanmıştır. İstersen kendi sunucunda veya uygun bir hosting üzerinde çalıştırabilirsin; `Dockerfile` ve `render.yaml` örnek yapılandırma olarak tutulur. Hosted servisin maliyeti, kaynak limitleri ve İETT kullanım koşulları deploy eden geliştiriciye aittir.
-
-## Durum
-
-Resmi İETT hat bazlı SOAP, filo SOAP ve WMyBus kaynakları; retry, sağlık izleme, ETA-plaka eşleştirmesi ve temel favori/konum/bildirim arayüzü hazırdır.
+Katkılar ve hata bildirimleri GitHub Issues üzerinden açılabilir.
 
 ## Lisans
 
-MIT lisansı ile dağıtılır. İETT veri kaynaklarının kendi kullanım koşulları ayrıca geçerlidir.
+MIT. İETT veri kaynaklarının kullanım koşulları ayrıca geçerlidir.
