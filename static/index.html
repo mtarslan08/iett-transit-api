@@ -9,18 +9,28 @@
 </head>
 <body>
   <main class="container">
-    <header><span class="eyebrow">İETT CANLI TAKİP</span><h1>Otobüsüm nerede?</h1><p>Hat ve durak bilgilerini canlı veriye göre takip et.</p></header>
+    <header class="hero">
+      <div>
+        <span class="eyebrow">İETT / LIVE TRANSIT</span>
+        <h1>Otobüsüm<br><span>nerede?</span></h1>
+        <p>Hat üzerindeki araçları ve durak varışlarını tek ekranda takip et.</p>
+      </div>
+      <div class="connection"><span class="pulse"></span><span id="connection-text">Canlı kaynak kontrol ediliyor</span></div>
+    </header>
     <section class="panel search-panel">
-      <label for="line">Hat numarası</label>
-      <div class="search-row"><input id="line" placeholder="Örn. 34AS" autocomplete="off" /><button id="search">Ara</button></div>
-      <label for="stop" class="stop-label">Durak kodu</label>
-      <div class="search-row"><input id="stop" placeholder="Örn. 225972" inputmode="numeric" autocomplete="off" /></div>
-      <p id="message" class="muted">Bir hat kodu girerek başla.</p>
+      <div class="search-title"><div><span class="kicker">HIZLI ARAMA</span><h2>Hat ve durak seç</h2></div><span class="shortcut">Enter ↵</span></div>
+      <div class="search-fields">
+        <div class="field"><label for="line">Hat numarası</label><input id="line" placeholder="34AS" autocomplete="off" /></div>
+        <div class="field"><label for="stop">Durak kodu</label><input id="stop" placeholder="225972" inputmode="numeric" autocomplete="off" /></div>
+        <button id="search"><span>Takibi başlat</span><b>→</b></button>
+      </div>
+      <p id="message" class="muted">Bir hat kodu ve durak kodu girerek canlı takibi başlat.</p>
     </section>
     <section id="route" class="panel hidden"></section>
-    <section class="panel"><div class="section-title"><h2>Hat haritası</h2><span id="live-status" class="muted"></span></div><div id="map" class="map"><span class="muted">Hat araması yaptığında harita burada görünecek.</span></div></section>
+    <section class="panel map-panel"><div class="section-title"><div><span class="kicker">GÜZERGÂH</span><h2>Hat haritası</h2></div><span id="live-status" class="status-chip">Beklemede</span></div><div id="map" class="map"><div class="map-empty"><span class="map-icon">⌖</span><span>Hat araması yaptığında harita burada görünecek.</span></div></div><div class="map-legend"><span><i class="dot stop-dot"></i>Durak</span><span><i class="dot bus-dot"></i>Canlı araç</span><span class="legend-note">Konumlar yaklaşık olabilir</span></div></section>
     <section class="panel">
-      <div class="section-title"><h2>Canlı araçlar</h2><span id="updated" class="muted"></span></div>
+      <div class="section-title"><div><span class="kicker">CANLI VARIŞLAR</span><h2>Duraktaki araçlar</h2></div><span id="updated" class="muted"></span></div>
+      <div id="stats" class="stats hidden"><div><strong id="arrival-count">—</strong><span>araç</span></div><div><strong id="nearest-eta">—</strong><span>en yakın dk</span></div><div><strong id="source-age">—</strong><span>kaynak yaşı</span></div></div>
       <div id="vehicles" class="empty">Hat ve durak kodu girerek canlı varışları gör.</div>
     </section>
   </main>

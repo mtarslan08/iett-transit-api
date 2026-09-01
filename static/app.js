@@ -12,6 +12,15 @@ async function getJson(url) {
   return response.json();
 }
 
+async function refreshConnectionStatus() {
+  try {
+    const data = await getJson('/api/live/status');
+    $('connection-text').textContent = data.available ? `${data.fresh_vehicle_count.toLocaleString('tr-TR')} araç canlı` : 'Canlı kaynak bekleniyor';
+  } catch (_) {
+    $('connection-text').textContent = 'Kaynak bağlantısı yok';
+  }
+}
+
 function showRoute(data) {
   const route = $('route');
   route.classList.remove('hidden');
@@ -50,19 +59,29 @@ async function showMap(line) {
 function showVehicles(data, line) {
   const target = $('vehicles');
   $('updated').textContent = data.fetched_at ? `Güncelleme: ${new Date(data.fetched_at).toLocaleTimeString('tr-TR')}` : '';
-  if (!data.available || !data.arrivals?.length) { target.className = 'empty'; target.textContent = 'Bu durak için şu anda canlı varış verisi bulunamadı.'; return; }
+  const arrivals = data.arrivals || [];
+  const stats = $('stats');
+  if (arrivals.length) {
+    stats.classList.remove('hidden');
+    $('arrival-count').textContent = arrivals.length;
+    $('nearest-eta').textContent = Math.min(...arrivals.map(v => v.eta_minutes).filter(Number.isFinite));
+    $('source-age').textContent = data.fetched_at ? 'az önce' : '—';
+  } else {
+    stats.classList.add('hidden');
+  }
+  if (!data.available || !arrivals.length) { target.className = 'empty'; target.textContent = 'Bu durak için şu anda canlı varış verisi bulunamadı.'; return; }
   target.className = '';
-  target.innerHTML = data.arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'}</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
+  target.innerHTML = arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'} · İETT canlı</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
 }
 
 async function search() {
   const line = lineInput.value.trim().toUpperCase(); if (!line) return;
-  $('search').disabled = true; message.textContent = `${line} aranıyor...`;
+  $('search').disabled = true; $('search').querySelector('span').textContent = 'Yükleniyor'; message.textContent = `${line} aranıyor...`;
   const stop = stopInput.value.trim(); if (!stop) { message.textContent = 'Canlı ETA için durak kodu da girmen gerekiyor.'; $('search').disabled = false; return; }
   activeQuery = { line, stop };
   try { const [route, arrivals] = await Promise.all([getJson(`/api/routes/${encodeURIComponent(line)}`), getJson(`/api/live/arrivals?stop_code=${encodeURIComponent(stop)}&line_code=${encodeURIComponent(line)}`)]); showRoute(route); showVehicles(arrivals, line); await showMap(line); message.textContent = `${line} / ${stop} için canlı sonuçlar gösteriliyor.`; scheduleRefresh(); }
   catch (error) { message.textContent = 'Veri alınamadı. Birkaç saniye sonra tekrar dene.'; console.error(error); }
-  finally { $('search').disabled = false; }
+  finally { $('search').disabled = false; $('search').querySelector('span').textContent = 'Takibi başlat'; }
 }
 
 function scheduleRefresh() {
@@ -79,3 +98,4 @@ function scheduleRefresh() {
   }, 20000);
 }
 $('search').addEventListener('click', search); lineInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+refreshConnectionStatus();
