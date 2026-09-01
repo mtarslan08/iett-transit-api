@@ -5,6 +5,8 @@ const message = $('message');
 let activeQuery = null;
 let refreshTimer = null;
 let map = null;
+let mapLine = null;
+let suggestionTimer = null;
 
 async function getJson(url) {
   const response = await fetch(url);
@@ -19,6 +21,25 @@ async function refreshConnectionStatus() {
   } catch (_) {
     $('connection-text').textContent = 'Kaynak bağlantısı yok';
   }
+}
+
+async function updateLineSuggestions() {
+  const query = lineInput.value.trim();
+  if (query.length < 2) return;
+  try {
+    const data = await getJson(`/api/route-search?q=${encodeURIComponent(query)}`);
+    $('line-options').innerHTML = (data.items || []).map(item => `<option value="${item.code}" label="${item.name || ''}"></option>`).join('');
+  } catch (_) { /* Öneri servisi kapalıysa manuel giriş devam eder. */ }
+}
+
+async function loadStopSuggestions(line) {
+  try {
+    const data = await getJson(`/api/routes/${encodeURIComponent(line)}`);
+    const stops = (data.directions || []).flatMap(direction => direction.stops || []);
+    const unique = [...new Map(stops.map(stop => [stop.stop_id, stop])).values()];
+    $('stop-options').innerHTML = unique.map(stop => `<option value="${stop.name || stop.stop_id}" label="Kod: ${stop.stop_id}"></option>`).join('');
+    lineInput.dataset.stops = JSON.stringify(unique);
+  } catch (_) { lineInput.dataset.stops = '[]'; }
 }
 
 function showRoute(data) {
@@ -42,8 +63,10 @@ async function showMap(line) {
   const data = await getJson(`/api/routes/${encodeURIComponent(line)}/map`);
   const places = (data.routes || []).flatMap(r => r.stationPlaces || []);
   if (!places.length) return;
+  const keepView = map && mapLine === line ? { center: map.getCenter(), zoom: map.getZoom() } : null;
   if (map) map.remove();
-  map = L.map('map').setView([places[0].lat, places[0].lng], 11);
+  map = L.map('map').setView(keepView ? keepView.center : [places[0].lat, places[0].lng], keepView ? keepView.zoom : 11);
+  mapLine = line;
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
   const points = places.map(p => [p.lat, p.lng]);
   L.polyline(points, { color: '#238636', weight: 4 }).addTo(map);
@@ -53,7 +76,7 @@ async function showMap(line) {
   for (const vehicle of live.vehicles || []) {
     L.marker([vehicle.latitude, vehicle.longitude]).bindPopup(`<b>${vehicle.plate || 'Plaka yok'}</b><br>Kapı: ${vehicle.door_number || '-'}<br>Hız: ${vehicle.speed_kmh ?? '-'} km/sa<br><small>Hat doğrulaması mevcut değil</small>`).addTo(map);
   }
-  map.fitBounds(points, { padding: [20, 20] });
+  if (!keepView) map.fitBounds(points, { padding: [20, 20] });
 }
 
 function showVehicles(data, line) {
@@ -77,9 +100,13 @@ function showVehicles(data, line) {
 async function search() {
   const line = lineInput.value.trim().toUpperCase(); if (!line) return;
   $('search').disabled = true; $('search').querySelector('span').textContent = 'Yükleniyor'; message.textContent = `${line} aranıyor...`;
-  const stop = stopInput.value.trim(); if (!stop) { message.textContent = 'Canlı ETA için durak kodu da girmen gerekiyor.'; $('search').disabled = false; return; }
+  let stop = stopInput.value.trim();
+  const stops = JSON.parse(lineInput.dataset.stops || '[]');
+  const selectedStop = stops.find(item => item.stop_id === stop || (item.name || '').toLocaleUpperCase('tr-TR') === stop.toLocaleUpperCase('tr-TR'));
+  if (selectedStop) { stop = selectedStop.stop_id; stopInput.value = selectedStop.name || selectedStop.stop_id; }
+  if (!stop) { message.textContent = 'Canlı ETA için durak kodu veya adı da girmen gerekiyor.'; $('search').disabled = false; return; }
   activeQuery = { line, stop };
-  try { const [route, arrivals] = await Promise.all([getJson(`/api/routes/${encodeURIComponent(line)}`), getJson(`/api/live/arrivals?stop_code=${encodeURIComponent(stop)}&line_code=${encodeURIComponent(line)}`)]); showRoute(route); showVehicles(arrivals, line); await showMap(line); message.textContent = `${line} / ${stop} için canlı sonuçlar gösteriliyor.`; scheduleRefresh(); }
+  try { const [route, arrivals] = await Promise.all([getJson(`/api/routes/${encodeURIComponent(line)}`), getJson(`/api/live/arrivals?stop_code=${encodeURIComponent(stop)}&line_code=${encodeURIComponent(line)}`)]); showRoute(route); showVehicles(arrivals, line); await showMap(line); message.textContent = `${line} / ${stopInput.value} için canlı sonuçlar gösteriliyor.`; scheduleRefresh(); }
   catch (error) { message.textContent = 'Veri alınamadı. Birkaç saniye sonra tekrar dene.'; console.error(error); }
   finally { $('search').disabled = false; $('search').querySelector('span').textContent = 'Takibi başlat'; }
 }
@@ -98,4 +125,6 @@ function scheduleRefresh() {
   }, 20000);
 }
 $('search').addEventListener('click', search); lineInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+lineInput.addEventListener('input', () => { clearTimeout(suggestionTimer); suggestionTimer = setTimeout(() => { updateLineSuggestions(); loadStopSuggestions(lineInput.value.trim().toUpperCase()); }, 250); });
+lineInput.addEventListener('change', () => loadStopSuggestions(lineInput.value.trim().toUpperCase()));
 refreshConnectionStatus();

@@ -103,6 +103,22 @@ async def route(line_code: str):
     }
 
 
+@app.get("/api/route-search")
+async def route_search(q: str = ""):
+    """Hat kutusu için resmi İETT katalog önerileri."""
+    query = q.strip()
+    if len(query) < 2:
+        return {"items": []}
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.get(
+            "https://iett.istanbul/tr/RouteStation/GetSearchItems",
+            params={"key": query, "langid": 1},
+        )
+        response.raise_for_status()
+    items = response.json().get("list", [])
+    return {"items": [{"code": item.get("Code"), "name": item.get("Name")} for item in items if item.get("Code")]}
+
+
 @app.get("/api/routes/{line_code}/map")
 async def route_map(line_code: str):
     async with httpx.AsyncClient(timeout=15) as client:

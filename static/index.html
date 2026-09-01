@@ -20,8 +20,8 @@
     <section class="panel search-panel">
       <div class="search-title"><div><span class="kicker">HIZLI ARAMA</span><h2>Hat ve durak seç</h2></div><span class="shortcut">Enter ↵</span></div>
       <div class="search-fields">
-        <div class="field"><label for="line">Hat numarası</label><input id="line" placeholder="34AS" autocomplete="off" /></div>
-        <div class="field"><label for="stop">Durak kodu</label><input id="stop" placeholder="225972" inputmode="numeric" autocomplete="off" /></div>
+        <div class="field"><label for="line">Hat numarası</label><input id="line" list="line-options" placeholder="34AS" autocomplete="off" /><datalist id="line-options"></datalist></div>
+        <div class="field"><label for="stop">Durak kodu veya adı</label><input id="stop" list="stop-options" placeholder="225972 veya Mecidiyeköy" inputmode="text" autocomplete="off" /><datalist id="stop-options"></datalist></div>
         <button id="search"><span>Takibi başlat</span><b>→</b></button>
       </div>
       <p id="message" class="muted">Bir hat kodu ve durak kodu girerek canlı takibi başlat.</p>
