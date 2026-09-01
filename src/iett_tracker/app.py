@@ -1,7 +1,8 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import httpx
 
 from .provider import IettProvider
@@ -10,6 +11,7 @@ from .catalog import StopCatalog
 from .route_catalog import RouteCatalog
 from .arrivals import IettArrivalProvider
 from .history import VehicleHistory
+from .config import settings
 from math import cos, radians
 import re
 import time
@@ -21,6 +23,7 @@ app = FastAPI(
     version="1.0.0",
     contact={"name": "otobusum_nerede_v2", "url": "https://github.com/mtarslan08/otobusum_nerede_v2"},
 )
+app.add_middleware(CORSMiddleware, allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()] or ["*"], allow_methods=["GET", "POST"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 provider = IettProvider()
 stop_catalog = StopCatalog()
@@ -47,6 +50,9 @@ async def public_api_rate_limit(request: Request, call_next):
         if len(bucket) >= RATE_LIMIT_REQUESTS:
             return JSONResponse({"error": {"code": "rate_limited", "message": "Dakikalık istek limiti aşıldı."}}, status_code=429, headers={"Retry-After": "60"})
         bucket.append(now)
+        if len(_request_log) > 1000:
+            for address in [address for address, values in _request_log.items() if not values]:
+                _request_log.pop(address, None)
     return await call_next(request)
 
 
@@ -254,7 +260,7 @@ async def v1_stop(stop_code: str):
     items = await stop_catalog.fetch()
     stop_item = next((item for item in items if item.id == stop_code), None)
     if stop_item is None:
-        return api_response(None, source="iett-stop-catalog") | {"error": {"code": "stop_not_found", "message": "Durak bulunamadı."}}
+        raise HTTPException(status_code=404, detail={"code": "stop_not_found", "message": "Durak bulunamadı."})
     return api_response(stop_item, source="iett-stop-catalog")
 
 
@@ -268,6 +274,8 @@ async def v1_stop_arrivals(stop_code: str, line_code: str):
 async def eta(stop: Stop, line: str | None = None):
     snapshot = await provider.fetch()
     return {
+        "experimental": True,
+        "note": "Bu endpoint kuş uçuşu mesafe ve ortalama hız kullanan deneysel tahmindir.",
         "fetched_at": snapshot.fetched_at,
         "stop": stop,
         "etas": nearest_vehicle_etas(snapshot.vehicles, stop, line),

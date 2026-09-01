@@ -46,7 +46,9 @@ Geliştiriciler için sürümlü REST API endpoint’leri `/api/v1` altında bul
 
 `GET http://127.0.0.1:8000/health` ile kontrol edilebilir.
 
-ETA denemesi için `POST /api/eta` endpoint’ine aşağıdaki gövde gönderilebilir:
+Varsayılan CORS ayarı geliştirici denemeleri için açıktır. Yayınlanan bir serviste `.env` içindeki `CORS_ORIGINS` değerini izin verilen domainlerle sınırlandır.
+
+Eski uyumluluk endpoint’i olan `POST /api/eta` deneysel olarak işaretlidir; kuş uçuşu mesafe ve ortalama hız kullanır. Geliştirici entegrasyonları için `/api/v1` endpoint’lerini tercih et.
 
 ```json
 {"id":"DURAK_ID","name":"Durak adı","latitude":41.0082,"longitude":28.9784}
