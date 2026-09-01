@@ -115,7 +115,7 @@ async def route_search(q: str = ""):
             params={"key": query, "langid": 1},
         )
         response.raise_for_status()
-    items = response.json().get("list", [])
+        items = response.json().get("list", [])
     return {"items": [{"code": item.get("Code"), "name": item.get("Name")} for item in items if item.get("Code")]}
 
 
