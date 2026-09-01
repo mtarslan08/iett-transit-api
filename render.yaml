@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: iett-tracker
+    env: python
+    buildCommand: pip install .
+    startCommand: uvicorn iett_tracker.app:app --host 0.0.0.0 --port $PORT --app-dir src
+    healthCheckPath: /health
+    envVars:
+      - key: IETT_API_USERNAME
+        sync: false
+      - key: IETT_API_PASSWORD
+        sync: false

@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     iett_request_timeout_seconds: float = 10
     live_cache_seconds: int = 20
     max_vehicle_age_seconds: int = 180
-    google_maps_api_key: str | None = None
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="", extra="ignore")
 

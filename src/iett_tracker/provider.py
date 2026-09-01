@@ -34,7 +34,16 @@ class IettProvider:
                 return self._cached_snapshot
             self._last_attempt_at = datetime.now(UTC)
             try:
-                snapshot = await self._fetch_uncached()
+                snapshot = None
+                for attempt in range(3):
+                    try:
+                        snapshot = await self._fetch_uncached()
+                        break
+                    except (httpx.HTTPError, ValueError, TypeError):
+                        if attempt == 2:
+                            raise
+                        await asyncio.sleep(0.4 * (attempt + 1))
+                assert snapshot is not None
             except (httpx.HTTPError, ValueError, TypeError):
                 self._last_error = "İETT canlı filosu alınamadı"
                 if self._cached_snapshot:
@@ -70,7 +79,16 @@ class IettProvider:
             return None
         try:
             code = line_code.strip().upper()
-            rows = await asyncio.to_thread(self._fetch_line_soap_rows, code)
+            rows = None
+            for attempt in range(3):
+                try:
+                    rows = await asyncio.to_thread(self._fetch_line_soap_rows, code)
+                    break
+                except (httpx.HTTPError, ValueError, TypeError):
+                    if attempt == 2:
+                        raise
+                    await asyncio.sleep(0.4 * (attempt + 1))
+            assert rows is not None
             line_snapshot = self._snapshot(rows, f"{settings.iett_wsdl_url}#GetHatOtoKonum_json")
             fleet_snapshot = await self.fetch()
             fleet_by_door = {self._door_key(v.door_number): v for v in fleet_snapshot.vehicles if v.door_number}

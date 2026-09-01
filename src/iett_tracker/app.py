@@ -5,7 +5,6 @@ import httpx
 
 from .provider import IettProvider
 from .eta import Stop, nearest_vehicle_etas
-from .routes import google_transit_duration_minutes
 from .catalog import StopCatalog
 from .route_catalog import RouteCatalog
 from .arrivals import IettArrivalProvider
@@ -54,7 +53,12 @@ async def home():
 
 @app.get("/health")
 async def health() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "provider": provider.status().get("source", "not-fetched")}
+
+
+@app.get("/health/detailed")
+async def detailed_health() -> dict:
+    return {"status": "ok", "live": provider.status(), "arrivals": arrival_provider.status()}
 
 
 @app.get("/api/live/vehicles")
@@ -171,7 +175,23 @@ async def vehicles_near_route(line_code: str):
 
 @app.get("/api/live/arrivals")
 async def arrivals(stop_code: str, line_code: str):
-    return await arrival_provider.fetch(stop_code, line_code)
+    result = await arrival_provider.fetch(stop_code, line_code)
+    # WMyBus ETA kaydında çoğu zaman plaka yok. Aynı hattın resmi canlı
+    # akışındaki nearest_stop_id ile yalnızca güvenli, doğrudan eşleşme yap.
+    exact = await provider.fetch_line(line_code)
+    candidates = []
+    if exact:
+        candidates = [v for v in exact.vehicles if v.nearest_stop_id == str(stop_code) and (v.plate or v.door_number)]
+    enriched = []
+    for index, item in enumerate(result.get("arrivals", [])):
+        value = item.model_dump() if hasattr(item, "model_dump") else dict(item)
+        if index < len(candidates):
+            vehicle = candidates[index]
+            value.update({"plate": vehicle.plate, "door_number": vehicle.door_number, "direction": vehicle.direction, "match_confidence": "exact-stop"})
+        else:
+            value["match_confidence"] = "unmatched"
+        enriched.append(value)
+    return {**result, "arrivals": enriched, "vehicle_match_count": len(candidates)}
 
 
 @app.post("/api/eta")
@@ -182,9 +202,3 @@ async def eta(stop: Stop, line: str | None = None):
         "stop": stop,
         "etas": nearest_vehicle_etas(snapshot.vehicles, stop, line),
     }
-
-
-@app.get("/api/routes/transit-duration")
-async def transit_duration(origin_lat: float, origin_lon: float, destination_lat: float, destination_lon: float):
-    minutes = await google_transit_duration_minutes(origin_lat, origin_lon, destination_lat, destination_lon)
-    return {"available": minutes is not None, "duration_minutes": minutes, "source": "google-routes" if minutes else None}

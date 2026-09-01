@@ -1,6 +1,6 @@
 # İETT Canlı Otobüs Takibi
 
-İETT canlı araç konumlarını, durak bilgilerini ve ileride Google Routes trafik sürelerini tek bir backend üzerinden birleştiren açık kaynak proje.
+İETT canlı araç konumlarını ve durak bilgilerini tek bir backend üzerinden birleştiren açık kaynak proje.
 
 ## Hedef mimari
 
@@ -37,9 +37,7 @@ ETA denemesi için `POST /api/eta` endpoint’ine aşağıdaki gövde gönderile
 {"id":"DURAK_ID","name":"Durak adı","latitude":41.0082,"longitude":28.9784}
 ```
 
-Bu MVP kuş uçuşu mesafe ve ortalama hız kullanır. Gerçek yol ağı, yön ve trafik hesabı Google Routes katmanında eklenecektir.
-
-Google Routes toplu taşıma çağrısı için `.env` dosyasına `GOOGLE_MAPS_API_KEY` eklenebilir. Anahtar yoksa sistem çalışmaya devam eder. Google transit süresi, İETT’nin canlı araç konumunun yerine geçmez; rota süresi için yardımcı veridir.
+ETA tarafında Google Maps API kullanılmaz; uygulama resmi İETT canlı akışlarıyla çalışır ve plaka eşleşmesi olmayan kayıtlarda tahmin uydurmaz.
 
 Canlı araç cevapları varsayılan olarak 20 saniye cache’lenir. `LIVE_CACHE_SECONDS` ile değiştirilebilir. Aynı anda gelen isteklerde yalnızca tek bir veri yenilemesi yapılır.
 
@@ -57,7 +55,7 @@ Bir aracın geçmişi `GET /api/live/vehicles/{vehicle_id}/history` ile incelene
 
 ## Durum
 
-İlk sürümde canlı sağlayıcı sözleşmesi ve normalize edilmiş veri modeli hazırlanıyor. İETT endpoint’inin güncel cevap formatı doğrulandıktan sonra gerçek adapter eklenecek. Google Routes entegrasyonu opsiyonel olacak ve yalnızca trafik etkili rota süresi için kullanılacak.
+Resmi İETT hat bazlı SOAP, filo SOAP ve WMyBus kaynakları; retry, sağlık izleme, ETA-plaka eşleştirmesi ve temel favori/konum/bildirim arayüzü hazırdır.
 
 ## Lisans
 

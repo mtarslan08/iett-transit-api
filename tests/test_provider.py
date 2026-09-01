@@ -1,4 +1,4 @@
-from datetime import UTC
+from datetime import UTC, datetime, timedelta
 
 from iett_tracker.provider import IettProvider
 
@@ -17,7 +17,7 @@ def test_snapshot_normalizes_official_line_fields():
             "hatkodu": "KM34",
             "guzergahkodu": "KM34_D_D0",
             "yon": "KARTAL METRO",
-            "son_konum_zamani": "2026-09-01 20:34:56",
+            "son_konum_zamani": (datetime.now(UTC) + timedelta(seconds=30)).astimezone().strftime("%Y-%m-%d %H:%M:%S"),
             "yakinDurakKodu": "227352",
         }
     ], "official")

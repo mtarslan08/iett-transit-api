@@ -7,6 +7,7 @@ let refreshTimer = null;
 let map = null;
 let mapLine = null;
 let suggestionTimer = null;
+const FAVORITES_KEY = 'iett-favorites-v1';
 
 async function getJson(url) {
   const response = await fetch(url);
@@ -94,8 +95,11 @@ function showVehicles(data, line) {
   }
   if (!data.available || !arrivals.length) { target.className = 'empty'; target.textContent = 'Bu durak için şu anda canlı varış verisi bulunamadı.'; return; }
   target.className = '';
-  target.innerHTML = arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'} · Kapı: ${v.door_number || '—'}</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
+  target.innerHTML = arrivals.map(v => `<article class="vehicle"><div><div class="line">${v.line}</div><div class="plate">${v.plate || v.origin || 'Sefer'}</div><div class="meta">Tahmini kalkış: ${v.departure_time || '-'} · Kapı: ${v.door_number || '—'}${v.match_confidence === 'exact-stop' ? ' · Plaka eşleşti' : ''}</div></div><div class="eta">${v.eta_minutes ?? '—'}<small>dakika</small></div></article>`).join('');
 }
+
+function favorites() { try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch (_) { return []; } }
+function renderFavorites() { const items = favorites(); $('favorites').classList.toggle('hidden', !items.length); $('favorite-list').innerHTML = items.map((item, i) => `<button class="favorite" data-favorite="${i}"><strong>${item.line}</strong><small>${item.stopName || item.stop}</small></button>`).join(''); document.querySelectorAll('[data-favorite]').forEach(button => button.addEventListener('click', () => { const item = favorites()[Number(button.dataset.favorite)]; lineInput.value = item.line; stopInput.value = item.stopName || item.stop; search(); })); }
 
 async function search() {
   const line = lineInput.value.trim().toUpperCase(); if (!line) return;
@@ -128,3 +132,7 @@ $('search').addEventListener('click', search); lineInput.addEventListener('keydo
 lineInput.addEventListener('input', () => { clearTimeout(suggestionTimer); suggestionTimer = setTimeout(() => { updateLineSuggestions(); loadStopSuggestions(lineInput.value.trim().toUpperCase()); }, 250); });
 lineInput.addEventListener('change', () => loadStopSuggestions(lineInput.value.trim().toUpperCase()));
 refreshConnectionStatus();
+renderFavorites();
+$('favorite').addEventListener('click', () => { if (!activeQuery) { message.textContent = 'Önce bir hat ve durak aratmalısın.'; return; } const items = favorites().filter(item => !(item.line === activeQuery.line && item.stop === activeQuery.stop)); items.unshift({ ...activeQuery, stopName: stopInput.value }); localStorage.setItem(FAVORITES_KEY, JSON.stringify(items.slice(0, 12))); renderFavorites(); message.textContent = 'Takip favorilere eklendi.'; });
+$('locate').addEventListener('click', () => navigator.geolocation?.getCurrentPosition(p => { message.textContent = `Konum alındı: ${p.coords.latitude.toFixed(5)}, ${p.coords.longitude.toFixed(5)}.`; $('locate').textContent = '✓ Konum alındı'; }, () => { message.textContent = 'Konum alınamadı; tarayıcı iznini kontrol et.'; }));
+$('notify').addEventListener('click', async () => { if (!('Notification' in window)) { message.textContent = 'Bu tarayıcı bildirimleri desteklemiyor.'; return; } const permission = await Notification.requestPermission(); $('notify').textContent = permission === 'granted' ? '✓ Bildirimler açık' : 'Bildirim izni verilmedi'; });

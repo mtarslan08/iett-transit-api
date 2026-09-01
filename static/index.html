@@ -24,6 +24,7 @@
         <div class="field"><label for="stop">Durak kodu veya adı</label><input id="stop" list="stop-options" placeholder="225972 veya Mecidiyeköy" inputmode="text" autocomplete="off" /><datalist id="stop-options"></datalist></div>
         <button id="search"><span>Takibi başlat</span><b>→</b></button>
       </div>
+      <div class="quick-actions"><button id="favorite" class="secondary" type="button">☆ Favoriye ekle</button><button id="locate" class="secondary" type="button">⌖ Konumumu kullan</button><button id="notify" class="secondary" type="button">🔔 Bildirimleri aç</button></div>
       <p id="message" class="muted">Bir hat kodu ve durak kodu girerek canlı takibi başlat.</p>
     </section>
     <section id="route" class="panel hidden"></section>
@@ -33,6 +34,7 @@
       <div id="stats" class="stats hidden"><div><strong id="arrival-count">—</strong><span>araç</span></div><div><strong id="nearest-eta">—</strong><span>en yakın dk</span></div><div><strong id="source-age">—</strong><span>kaynak yaşı</span></div></div>
       <div id="vehicles" class="empty">Hat ve durak kodu girerek canlı varışları gör.</div>
     </section>
+    <section id="favorites" class="panel hidden"><div class="section-title"><div><span class="kicker">KAYITLILAR</span><h2>Favori takipler</h2></div></div><div id="favorite-list" class="favorite-list"></div></section>
   </main>
   <script src="/static/app.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
