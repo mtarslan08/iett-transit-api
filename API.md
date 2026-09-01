@@ -38,6 +38,10 @@ curl "http://localhost:8000/api/v1/stops/225972/arrivals?line_code=KM34"
 
 `stale: true`, kaynağın boş veya son başarılı verinin kullanılamadığı anlamına gelir. Plaka eşleşmesi yoksa `plate` alanı `null` kalır; API veri uydurmaz.
 
+## Kullanım limiti
+
+Public `/api/v1` endpoint’leri istemci başına dakikada 120 istekle sınırlıdır. Uygulamalar kendi tarafında da cache kullanmalı ve canlı endpoint’leri sürekli yenilememelidir. Limit aşılırsa `429` döner.
+
 ## Veri kaynakları
 
 - Araç konumu ve hat: İETT `GetFiloAracKonum_json` / `GetHatOtoKonum_json`

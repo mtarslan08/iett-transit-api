@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import httpx
@@ -11,6 +12,8 @@ from .arrivals import IettArrivalProvider
 from .history import VehicleHistory
 from math import cos, radians
 import re
+import time
+from collections import defaultdict, deque
 
 app = FastAPI(
     title="İETT Transit Data API",
@@ -24,10 +27,27 @@ stop_catalog = StopCatalog()
 route_catalog = RouteCatalog()
 arrival_provider = IettArrivalProvider()
 vehicle_history = VehicleHistory()
+_request_log: dict[str, deque[float]] = defaultdict(deque)
+RATE_LIMIT_WINDOW = 60
+RATE_LIMIT_REQUESTS = 120
 
 
 def api_response(data, *, source: str = "iett", fetched_at=None, stale: bool = False) -> dict:
     return {"data": data, "meta": {"source": source, "fetched_at": fetched_at, "stale": stale}}
+
+
+@app.middleware("http")
+async def public_api_rate_limit(request: Request, call_next):
+    if request.url.path.startswith("/api/v1/"):
+        client = request.client.host if request.client else "unknown"
+        now = time.monotonic()
+        bucket = _request_log[client]
+        while bucket and now - bucket[0] >= RATE_LIMIT_WINDOW:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_REQUESTS:
+            return JSONResponse({"error": {"code": "rate_limited", "message": "Dakikalık istek limiti aşıldı."}}, status_code=429, headers={"Retry-After": "60"})
+        bucket.append(now)
+    return await call_next(request)
 
 
 def _route_points(route_rows: list[dict]) -> list[tuple[float, float]]:
