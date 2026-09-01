@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>İETT Canlı Otobüs</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+  <main class="container">
+    <header><span class="eyebrow">İETT CANLI TAKİP</span><h1>Otobüsüm nerede?</h1><p>Hat ve durak bilgilerini canlı veriye göre takip et.</p></header>
+    <section class="panel search-panel">
+      <label for="line">Hat numarası</label>
+      <div class="search-row"><input id="line" placeholder="Örn. 34AS" autocomplete="off" /><button id="search">Ara</button></div>
+      <label for="stop" class="stop-label">Durak kodu</label>
+      <div class="search-row"><input id="stop" placeholder="Örn. 225972" inputmode="numeric" autocomplete="off" /></div>
+      <p id="message" class="muted">Bir hat kodu girerek başla.</p>
+    </section>
+    <section id="route" class="panel hidden"></section>
+    <section class="panel"><div class="section-title"><h2>Hat haritası</h2><span id="live-status" class="muted"></span></div><div id="map" class="map"><span class="muted">Hat araması yaptığında harita burada görünecek.</span></div></section>
+    <section class="panel">
+      <div class="section-title"><h2>Canlı araçlar</h2><span id="updated" class="muted"></span></div>
+      <div id="vehicles" class="empty">Hat ve durak kodu girerek canlı varışları gör.</div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</body>
+</html>
