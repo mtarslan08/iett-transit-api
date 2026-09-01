@@ -12,12 +12,22 @@ Canlı veri kaynağı değişebildiği için sağlayıcı katmanı ayrı tutulur
 
 ## Başlangıç
 
+> Önemli: `static/index.html` dosyasını çift tıklayarak açma. Uygulama FastAPI üzerinden çalışır; aksi halde CSS ve JavaScript yüklenmez.
+
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e .
 uvicorn iett_tracker.app:app --reload
 ```
+
+Python PATH'te değilse Windows'ta şu komutu kullanabilirsin:
+
+```powershell
+& "C:\Users\harslan\AppData\Local\Programs\Python\Python313\python.exe" -m uvicorn iett_tracker.app:app --reload --app-dir src
+```
+
+Ardından tarayıcıda `http://127.0.0.1:8000` adresini aç.
 
 `GET http://127.0.0.1:8000/health` ile kontrol edilebilir.
 
