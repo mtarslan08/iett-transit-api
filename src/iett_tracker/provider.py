@@ -48,33 +48,6 @@ class IettProvider:
             self._cache_expires_at = time.monotonic() + settings.live_cache_seconds
             return snapshot
 
-    async def fetch_line(self, line_code: str) -> LiveSnapshot | None:
-        """İETTNext'in hat bazlı canlı akışını kullanır; hat bilgisi burada doğrulanmıştır."""
-        if not settings.iett_next_api_url:
-            return None
-        try:
-            async with httpx.AsyncClient(timeout=settings.iett_request_timeout_seconds) as client:
-                response = await client.post(
-                    f"{settings.iett_next_api_url.rstrip('/')}/line-vehicles",
-                    json={"line": line_code.strip().upper()},
-                )
-                response.raise_for_status()
-                payload = response.json()
-            vehicles = []
-            for row in payload.get("vehicles", []):
-                if row.get("lat") is None or row.get("lon") is None:
-                    continue
-                vehicles.append(Vehicle(
-                    id=str(row.get("vehicleDoorCode", "unknown")),
-                    line=line_code.strip().upper(),
-                    door_number=row.get("vehicleDoorCode"),
-                    latitude=float(row["lat"]), longitude=float(row["lon"]),
-                    bearing=None, recorded_at=datetime.now(UTC),
-                ))
-            return LiveSnapshot(fetched_at=datetime.now(UTC), source=f"{settings.iett_next_api_url}/line-vehicles", vehicles=vehicles)
-        except (httpx.HTTPError, ValueError, TypeError, KeyError):
-            return None
-
     async def _fetch_uncached(self) -> LiveSnapshot:
         if settings.iett_wsdl_url:
             rows = await asyncio.to_thread(self._fetch_soap_rows)

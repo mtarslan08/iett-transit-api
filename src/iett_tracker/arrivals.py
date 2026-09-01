@@ -21,7 +21,6 @@ class Arrival(BaseModel):
 
 class IettArrivalProvider:
     url = "https://iett.istanbul/WMyBus"
-    exact_url = "https://iett.rednexie.workers.dev/bus-arrivals"
 
     def __init__(self) -> None:
         self._cache: dict[tuple[str, str], tuple[float, dict]] = {}
@@ -37,10 +36,6 @@ class IettArrivalProvider:
             if cached and time.monotonic() < cached[0]:
                 return cached[1]
             try:
-                exact = await self._fetch_exact(key[0], key[1])
-                if exact is not None:
-                    self._cache[key] = (time.monotonic() + 15, exact)
-                    return exact
                 async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
                     response = await client.get(self.url, params={"dcode": key[0], "hcode": key[1]})
                     response.raise_for_status()
@@ -51,33 +46,6 @@ class IettArrivalProvider:
                 return {"available": False, "fetched_at": datetime.now(UTC), "source": self.url, "line": key[1], "arrivals": []}
             self._cache[key] = (time.monotonic() + 15, result)
             return result
-
-    async def _fetch_exact(self, stop_code: str, line_code: str) -> dict | None:
-        """İETTNext proxy'sinden hat + kapı + ETA bilgisini alır."""
-        async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(self.exact_url, json={"stopId": int(stop_code)})
-            response.raise_for_status()
-            rows = response.json()
-        matches = [row for row in rows if str(row.get("hatkodu", "")).upper() == line_code]
-        if not matches:
-            return None
-        arrivals = [Arrival(
-            line=line_code,
-            origin=row.get("hatadi"),
-            departure_time=row.get("saat"),
-            eta_minutes=row.get("dakika"),
-            door_number=row.get("kapino"),
-            direction=row.get("guzergah"),
-            last_location=row.get("son_konum"),
-            raw_text=f"{row.get('hatadi', '')} {row.get('saat', '')} {row.get('dakika', '')} dk",
-        ) for row in matches]
-        return {
-            "available": True,
-            "fetched_at": datetime.now(UTC),
-            "source": self.exact_url,
-            "line": line_code,
-            "arrivals": arrivals,
-        }
 
     def _parse(self, html: str, line_code: str) -> dict:
         soup = BeautifulSoup(html, "html.parser")
